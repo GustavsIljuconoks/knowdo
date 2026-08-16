@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>KnowDo</title>
+</head>
+<body>
+  <h1>KnowDo</h1>
+  <form id="new-task">
+    <input name="title" placeholder="Task title" required>
+    <button type="submit">Add</button>
+  </form>
+  <ul id="tasks"></ul>
+
+  <script>
+    async function loadTasks() {
+      const res = await fetch('/tasks');
+      const tasks = await res.json();
+      const list = document.getElementById('tasks');
+
+      list.innerHTML = '';
+
+      for (const t of tasks) {
+        const li = document.createElement('li');
+        li.textContent = `${t.title} — ${t.status}`;
+        list.appendChild(li);
+      }
+    }
+
+    document.getElementById('new-task').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const title = e.target.title.value;
+
+      await fetch('/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+
+      e.target.reset();
+      loadTasks();
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>
