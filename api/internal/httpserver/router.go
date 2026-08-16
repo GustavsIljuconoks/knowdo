@@ -5,14 +5,21 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"knowdo/api/internal/task"
 )
 
-// NewRouter wires up the API's HTTP routes. Task routes are added here
-// once the task package exists.
 func NewRouter(pool *pgxpool.Pool) *http.ServeMux {
 	mux := http.NewServeMux()
 
+	taskHandlers := task.NewHandlers(task.NewPGStore(pool))
+
 	mux.HandleFunc("GET /health", handleHealth)
+	mux.HandleFunc("POST /tasks", taskHandlers.HandleCreate)
+	mux.HandleFunc("GET /tasks", taskHandlers.HandleList)
+	mux.HandleFunc("GET /tasks/{id}", taskHandlers.HandleGet)
+	mux.HandleFunc("PATCH /tasks/{id}", taskHandlers.HandleUpdate)
+	mux.HandleFunc("DELETE /tasks/{id}", taskHandlers.HandleDelete)
 	mux.Handle("/", http.FileServer(http.Dir("static")))
 
 	return mux
