@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: api/go.mod
-          cache: true
+          cache-dependency-path: api/go.sum
       - run: go build ./...
       - run: go test ./...
 
@@ -28,8 +28,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: api/go.mod
-          cache: true
-      - uses: golangci/golangci-lint-action@v6
+          cache-dependency-path: api/go.sum
+      - uses: golangci/golangci-lint-action@v7
         with:
           working-directory: api
           version: v2.12.2
@@ -38,4 +38,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build ./api
+      - run: docker build .
