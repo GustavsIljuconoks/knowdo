@@ -3,6 +3,7 @@ package task
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,7 +26,9 @@ func (h *Handlers) HandleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+	if err := json.NewEncoder(w).Encode(tasks); err != nil {
+		log.Printf("encoding response: %v", err)
+	}
 }
 
 func (h *Handlers) HandleCreate(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +61,9 @@ func (h *Handlers) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(t)
+	if err := json.NewEncoder(w).Encode(t); err != nil {
+		log.Printf("encoding response: %v", err)
+	}
 }
 
 func (h *Handlers) HandleGet(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +81,9 @@ func (h *Handlers) HandleGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(t)
+	if err := json.NewEncoder(w).Encode(t); err != nil {
+		log.Printf("encoding response: %v", err)
+	}
 }
 
 func (h *Handlers) HandleUpdate(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +107,9 @@ func (h *Handlers) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(t)
+	if err := json.NewEncoder(w).Encode(t); err != nil {
+		log.Printf("encoding response: %v", err)
+	}
 }
 
 func (h *Handlers) HandleDelete(w http.ResponseWriter, r *http.Request) {
