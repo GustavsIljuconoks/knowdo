@@ -147,17 +147,28 @@ New top-level `worker/` directory. Small modules, each with one job:
   Marked `ponytail:` as a naive character splitter; the upgrade path is
   a token-aware splitter, taken only if retrieval quality visibly
   suffers.
-- `embed.py` — `fastembed` with `BAAI/bge-small-en-v1.5` (384
-  dimensions). Chosen over `sentence-transformers` because it is ONNX
-  based and does not pull in PyTorch. The model is baked into the Docker
-  image at build time so the first request is not a model download.
+- `embed.py` — `fastembed`, model from `EMBED_MODEL` (default
+  `BAAI/bge-small-en-v1.5`, 384 dimensions). Chosen over
+  `sentence-transformers` because it is ONNX based and does not pull in
+  PyTorch. The model is baked into the Docker image at build time so the
+  first request is not a model download.
 - `vectors.py` — Qdrant client. Collection `knowdo`, 384-dim, cosine
   distance, created on startup if absent. Chunk payload is
   `{document_id, chunk_index, text}`.
-- `llm.py` — Kimi (Moonshot) through the `openai` SDK with
-  `base_url=https://api.moonshot.ai/v1`, key from `MOONSHOT_API_KEY`.
+- `llm.py` — a single `chat(messages) -> str` over the `openai` SDK,
+  configured by `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`. See
+  "Swapping the LLM" below.
+- `db.py` — the two Postgres statements the worker needs: read a
+  document's bytes, write back its status.
+- `ingest.py` — the ingest pipeline, composing extract → chunk → embed →
+  upsert.
+- `rag.py` — the ask pipeline: embed → search → prompt → `chat()`.
 - `consumer.py` — `BLPOP` loop over `knowdo:jobs:ingest`.
 - `api.py` — FastAPI: `POST /ask`, `GET /health`.
+
+`ingest.py` and `rag.py` take their embedder and chat function as
+default arguments, so tests inject stubs and neither the model download
+nor the LLM API is reachable from the test suite.
 
 ### Embeddings local, generation hosted
 
@@ -166,6 +177,37 @@ so the two halves are split by necessity — and the split is the one
 worth having anyway. Embedding runs locally, where it is cheap, offline,
 and keeps tests free of network calls. Generation uses the hosted model,
 where hosted quality actually matters.
+
+### Swapping the LLM
+
+The OpenAI chat-completions shape is the de-facto standard: Kimi,
+DeepSeek, Groq, Together, Mistral, OpenRouter, Ollama, vLLM and
+llama.cpp's server all speak it. So provider choice is configuration,
+not code — `llm.py` is one function and every caller goes through it.
+
+| Provider | `LLM_BASE_URL` | `LLM_MODEL` |
+|---|---|---|
+| Kimi (default) | `https://api.moonshot.ai/v1` | `kimi-k2-0905-preview` |
+| Ollama, local | `http://ollama:11434/v1` | `qwen2.5:7b` |
+| vLLM, self-hosted | `http://vllm:8000/v1` | `Qwen/Qwen2.5-7B-Instruct` |
+
+No provider hierarchy, registry, or factory: an interface with one
+implementation buys nothing that three environment variables do not.
+Should a genuinely non-compatible provider ever be needed, it becomes a
+branch inside `chat()` — still no caller changes.
+
+This is also deliberately short-lived. Stage 4 introduces
+LangChain/LangGraph, whose `init_chat_model()` is a maintained provider
+abstraction covering the non-compatible providers too. A single function
+is the cheapest possible thing to replace at that point; a hand-rolled
+hierarchy would be written now only to be deleted then.
+
+vLLM is worth a note because it is the one option with a real reason to
+arrive later: its value is throughput (PagedAttention, continuous
+batching), which is invisible at one concurrent user and decisive for
+Stage 4's evaluation runs, a GPU node pool in Stage 6, and load testing
+in Stage 10. It also needs an NVIDIA GPU in practice. Adding it then is
+two environment variables and a Compose block.
 
 ### Ingest pipeline
 
@@ -200,9 +242,10 @@ Four new services alongside `postgres` and `api`:
 - `worker` (built from `worker/`, command: the consumer, no ports)
 - `ai` (same build, command: `uvicorn`, port 8000 exposed internally)
 
-New environment: `REDIS_URL`, `QDRANT_URL`, `MOONSHOT_API_KEY` for the
-Python services; `REDIS_URL` and `AI_URL` for the Go API. `.env` gains a
-`MOONSHOT_API_KEY=` placeholder to be filled in locally; it is not
+New environment: `REDIS_URL`, `QDRANT_URL`, `DATABASE_URL`,
+`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` and `EMBED_MODEL` for the
+Python services; `REDIS_URL` and `AI_URL` for the Go API. `.env` gains
+an `LLM_API_KEY=` placeholder to be filled in locally; it is not
 committed with a value.
 
 Migrations continue to run via the `migrate` CLI, as in Stage 1, not
