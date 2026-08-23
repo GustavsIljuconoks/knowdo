@@ -13,12 +13,14 @@ import (
 	"knowdo/api/internal/task"
 )
 
-func NewRouter(pool *pgxpool.Pool, q queue.Queue, asker ai.Asker) *http.ServeMux {
+func NewRouter(pool *pgxpool.Pool, q queue.Queue, aiClient *ai.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	taskHandlers := task.NewHandlers(task.NewPGStore(pool))
+	taskStore := task.NewPGStore(pool)
+	taskHandlers := task.NewHandlers(taskStore)
 	documentHandlers := document.NewHandlers(document.NewPGStore(pool), q)
-	askHandlers := ai.NewHandlers(asker)
+	askHandlers := ai.NewHandlers(aiClient)
+	planHandlers := ai.NewPlanHandlers(aiClient, taskStore)
 
 	mux.HandleFunc("GET /health", handleHealth)
 	mux.HandleFunc("POST /tasks", taskHandlers.HandleCreate)
@@ -30,6 +32,7 @@ func NewRouter(pool *pgxpool.Pool, q queue.Queue, asker ai.Asker) *http.ServeMux
 	mux.HandleFunc("GET /documents", documentHandlers.HandleList)
 	mux.HandleFunc("GET /documents/{id}", documentHandlers.HandleGet)
 	mux.HandleFunc("POST /ask", askHandlers.HandleAsk)
+	mux.HandleFunc("POST /plan", planHandlers.HandlePlan)
 	mux.Handle("/", http.FileServer(http.Dir("static")))
 
 	return mux

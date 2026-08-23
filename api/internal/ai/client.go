@@ -27,6 +27,26 @@ type Asker interface {
 	Ask(ctx context.Context, question string) (Response, error)
 }
 
+// Plan is the structured plan the Python /plan endpoint returns.
+type Plan struct {
+	Goal  string        `json:"goal"`
+	Tasks []PlannedTask `json:"tasks"`
+}
+
+// PlannedTask's DueDate is a "2006-01-02" date string — the worker
+// already resolved the model's relative day_offset against today, so
+// this side just parses it, it doesn't compute it.
+type PlannedTask struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	DueDate     string `json:"due_date"`
+}
+
+// Planner is the boundary the handler depends on, so tests need no server.
+type Planner interface {
+	Plan(ctx context.Context, request string) (Plan, error)
+}
+
 type Client struct {
 	baseURL string
 	http    *http.Client
@@ -43,33 +63,41 @@ func NewClient(baseURL string) *Client {
 }
 
 func (c *Client) Ask(ctx context.Context, question string) (Response, error) {
-	body, err := json.Marshal(map[string]string{"question": question})
+	var out Response
+	err := c.post(ctx, "/ask", map[string]string{"question": question}, &out)
+	return out, err
+}
+
+func (c *Client) Plan(ctx context.Context, request string) (Plan, error) {
+	var out Plan
+	err := c.post(ctx, "/plan", map[string]string{"request": request}, &out)
+	return out, err
+}
+
+// post sends reqBody as JSON to path and decodes the JSON response into out.
+func (c *Client) post(ctx context.Context, path string, reqBody, out any) error {
+	body, err := json.Marshal(reqBody)
 	if err != nil {
-		return Response{}, err
+		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/ask", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
 	if err != nil {
-		return Response{}, err
+		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return Response{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		return fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return Response{}, fmt.Errorf("ai service returned %s", resp.Status)
+		return fmt.Errorf("ai service returned %s", resp.Status)
 	}
 
-	var out Response
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return Response{}, err
-	}
-
-	return out, nil
+	return json.NewDecoder(resp.Body).Decode(out)
 }
