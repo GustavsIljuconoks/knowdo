@@ -143,10 +143,19 @@ New top-level `worker/` directory. Small modules, each with one job:
 - `extract.py` — PDF text via `pypdf`; everything else decoded as UTF-8
   (Markdown, plain text). Unknown/binary content → a failed job with a
   readable error, not a crash.
-- `chunk.py` — fixed 800-character windows with 100-character overlap.
-  Marked `ponytail:` as a naive character splitter; the upgrade path is
-  a token-aware splitter, taken only if retrieval quality visibly
-  suffers.
+- `chunk.py` — 800-character chunks with 100-character overlap, via
+  LangChain's `RecursiveCharacterTextSplitter`. It tries paragraph, then
+  line, then word, then character boundaries and takes the coarsest that
+  fits, so chunks do not start mid-word. This costs a dependency
+  (`langchain-text-splitters`, 14 transitive packages) that a fixed
+  character window would not, taken deliberately: Stage 4 pulls
+  `langchain-core` in via LangGraph anyway, so the marginal cost falls to
+  one package then, and the seam is a single function either way. The
+  trade is that overlap is honoured approximately rather than to the
+  character — boundary-aligned chunks cannot also be exact windows.
+  `ponytail:` still character-counted, not token-counted; switch to
+  `.from_huggingface_tokenizer()` if the embedding model starts
+  truncating chunks.
 - `embed.py` — `fastembed`, model from `EMBED_MODEL` (default
   `BAAI/bge-small-en-v1.5`, 384 dimensions). Chosen over
   `sentence-transformers` because it is ONNX based and does not pull in
@@ -187,7 +196,7 @@ not code — `llm.py` is one function and every caller goes through it.
 
 | Provider | `LLM_BASE_URL` | `LLM_MODEL` |
 |---|---|---|
-| Kimi (default) | `https://api.moonshot.ai/v1` | `kimi-k2-0905-preview` |
+| Kimi (default) | `https://api.moonshot.ai/v1` | `kimi-k3` |
 | Ollama, local | `http://ollama:11434/v1` | `qwen2.5:7b` |
 | vLLM, self-hosted | `http://vllm:8000/v1` | `Qwen/Qwen2.5-7B-Instruct` |
 
