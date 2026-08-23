@@ -7,13 +7,18 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"knowdo/api/internal/ai"
+	"knowdo/api/internal/document"
+	"knowdo/api/internal/queue"
 	"knowdo/api/internal/task"
 )
 
-func NewRouter(pool *pgxpool.Pool) *http.ServeMux {
+func NewRouter(pool *pgxpool.Pool, q queue.Queue, asker ai.Asker) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	taskHandlers := task.NewHandlers(task.NewPGStore(pool))
+	documentHandlers := document.NewHandlers(document.NewPGStore(pool), q)
+	askHandlers := ai.NewHandlers(asker)
 
 	mux.HandleFunc("GET /health", handleHealth)
 	mux.HandleFunc("POST /tasks", taskHandlers.HandleCreate)
@@ -21,6 +26,10 @@ func NewRouter(pool *pgxpool.Pool) *http.ServeMux {
 	mux.HandleFunc("GET /tasks/{id}", taskHandlers.HandleGet)
 	mux.HandleFunc("PATCH /tasks/{id}", taskHandlers.HandleUpdate)
 	mux.HandleFunc("DELETE /tasks/{id}", taskHandlers.HandleDelete)
+	mux.HandleFunc("POST /documents", documentHandlers.HandleCreate)
+	mux.HandleFunc("GET /documents", documentHandlers.HandleList)
+	mux.HandleFunc("GET /documents/{id}", documentHandlers.HandleGet)
+	mux.HandleFunc("POST /ask", askHandlers.HandleAsk)
 	mux.Handle("/", http.FileServer(http.Dir("static")))
 
 	return mux

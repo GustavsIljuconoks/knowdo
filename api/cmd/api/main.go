@@ -9,7 +9,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"knowdo/api/internal/ai"
 	"knowdo/api/internal/httpserver"
+	"knowdo/api/internal/queue"
 )
 
 func main() {
@@ -31,12 +33,31 @@ func main() {
 		log.Fatalf("pinging database: %v", err)
 	}
 
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		log.Fatal("REDIS_URL is required")
+	}
+
+	jobs, err := queue.NewRedis(redisURL)
+	if err != nil {
+		log.Fatalf("configuring redis: %v", err)
+	}
+
+	if err := jobs.Ping(ctx); err != nil {
+		log.Fatalf("pinging redis: %v", err)
+	}
+
+	aiURL := os.Getenv("AI_URL")
+	if aiURL == "" {
+		log.Fatal("AI_URL is required")
+	}
+
 	addr := os.Getenv("HTTP_ADDR")
 	if addr == "" {
 		addr = ":8080"
 	}
 
-	mux := httpserver.NewRouter(pool)
+	mux := httpserver.NewRouter(pool, jobs, ai.NewClient(aiURL))
 
 	log.Printf("listening on %s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
