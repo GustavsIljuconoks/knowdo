@@ -30,6 +30,8 @@ packages = ["knowdo_worker"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not eval'"
+markers = ["eval: hits the real LLM (needs LLM_BASE_URL/LLM_MODEL/LLM_API_KEY); run with `pytest -m eval`"]
 
 [tool.ruff]
 line-length = 100
