@@ -883,31 +883,31 @@ Do not build everything at once.
 
 ## Stage 1 — Application
 
-- [ ] Create Go API
-- [ ] Add PostgreSQL
-- [ ] Implement tasks CRUD
-- [ ] Add basic frontend
-- [ ] Add Docker Compose
+- [x] Create Go API
+- [x] Add PostgreSQL
+- [x] Implement tasks CRUD
+- [x] Add basic frontend
+- [x] Add Docker Compose
 
 ## Stage 2 — CI
 
-- [ ] Add GitHub repository
-- [ ] Add GitHub Actions
-- [ ] Run Go tests
-- [ ] Run Python tests
-- [ ] Add linting
-- [ ] Build Docker images
+- [x] Add GitHub repository
+- [x] Add GitHub Actions
+- [x] Run Go tests
+- [x] Run Python tests
+- [x] Add linting
+- [x] Build Docker images
 
 ## Stage 3 — AI
 
-- [ ] Create Python worker
-- [ ] Add Redis job queue
-- [ ] Add document upload
-- [ ] Extract document text
-- [ ] Chunk documents
-- [ ] Generate embeddings
-- [ ] Store embeddings in Qdrant
-- [ ] Implement basic RAG
+- [x] Create Python worker
+- [x] Add Redis job queue
+- [x] Add document upload
+- [x] Extract document text
+- [x] Chunk documents
+- [x] Generate embeddings
+- [x] Store embeddings in Qdrant
+- [x] Implement basic RAG
 
 ## Stage 4 — AI Task Planning
 
