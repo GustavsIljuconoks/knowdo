@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "knowdo-worker"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "redis>=5.2",
+    "psycopg[binary]>=3.2",
+    # Pinned to the server minor in docker-compose.yml: the client
+    # refuses to vouch for a minor gap wider than one. Upgrade both
+    # together, and note v1.19 cannot read v1.12 storage on disk.
+    "qdrant-client>=1.12,<1.13",
+    "fastembed>=0.4",
+    "pypdf>=5.1",
+    "openai>=1.55",
+    "langchain-text-splitters>=0.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "ruff>=0.8", "httpx>=0.28", "reportlab>=4.2"]
+
+[tool.setuptools]
+packages = ["knowdo_worker"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
