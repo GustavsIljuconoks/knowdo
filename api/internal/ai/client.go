@@ -93,7 +93,7 @@ func (c *Client) post(ctx context.Context, path string, reqBody, out any) error 
 		return fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("ai service returned %s", resp.Status)
