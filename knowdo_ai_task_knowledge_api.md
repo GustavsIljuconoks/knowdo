@@ -911,12 +911,12 @@ Do not build everything at once.
 
 ## Stage 4 — AI Task Planning
 
-- [ ] Ask AI to create tasks
-- [ ] Validate structured AI output
-- [ ] Save generated tasks to PostgreSQL
-- [ ] Add task planning workflow
-- [ ] Introduce LangGraph
-- [ ] Add basic evaluation
+- [x] Ask AI to create tasks
+- [x] Validate structured AI output
+- [x] Save generated tasks to PostgreSQL
+- [x] Add task planning workflow
+- [x] Introduce LangGraph
+- [x] Add basic evaluation
 
 ## Stage 5 — Terraform
 
