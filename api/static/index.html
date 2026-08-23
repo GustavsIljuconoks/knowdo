@@ -12,6 +12,20 @@
   </form>
   <ul id="tasks"></ul>
 
+  <h2>Documents</h2>
+  <form id="upload">
+    <input type="file" name="file" required>
+    <button type="submit">Upload</button>
+  </form>
+  <ul id="documents"></ul>
+
+  <h2>Ask</h2>
+  <form id="ask">
+    <input name="question" placeholder="Ask about your documents" size="40" required>
+    <button type="submit">Ask</button>
+  </form>
+  <p id="answer"></p>
+
   <script>
     async function loadTasks() {
       const res = await fetch('/tasks');
@@ -42,7 +56,66 @@
       loadTasks();
     });
 
+    async function loadDocuments() {
+      const res = await fetch('/documents');
+      const documents = await res.json();
+      const list = document.getElementById('documents');
+
+      list.innerHTML = '';
+
+      for (const d of documents) {
+        const li = document.createElement('li');
+        li.textContent = `${d.filename} — ${d.status}` +
+          (d.status === 'ready' ? ` (${d.chunk_count} chunks)` : '') +
+          (d.error ? `: ${d.error}` : '');
+        list.appendChild(li);
+      }
+    }
+
+    document.getElementById('upload').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const body = new FormData();
+      body.append('file', e.target.file.files[0]);
+
+      const res = await fetch('/documents', { method: 'POST', body });
+
+      if (!res.ok) {
+        alert(`Upload failed: ${res.status}`);
+        return;
+      }
+
+      e.target.reset();
+      loadDocuments();
+    });
+
+    document.getElementById('ask').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const answer = document.getElementById('answer');
+      answer.textContent = 'Thinking…';
+
+      const res = await fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: e.target.question.value }),
+      });
+
+      if (!res.ok) {
+        answer.textContent = `Error: ${res.status}`;
+        return;
+      }
+
+      const { answer: text, sources } = await res.json();
+      answer.textContent = sources?.length ? `${text} (sources: ${sources.join(', ')})` : text;
+    });
+
     loadTasks();
+    loadDocuments();
+
+    // Ingestion is asynchronous, so the status column only becomes true
+    // by asking again. ponytail: a poll, not a websocket.
+    setInterval(loadDocuments, 3000);
   </script>
 </body>
 </html>
